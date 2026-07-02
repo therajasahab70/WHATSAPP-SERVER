@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>𝐆𝐀𝐃𝐀𝐑 𝐖𝐇𝐀𝐓𝐒𝐀𝐏𝐏 𝐂𝐎𝐍𝐕𝐎 𝐊𝐀𝐓𝐓𝐀𝐑 𝐇𝐈𝐍𝐃𝐔</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 30px; background: #e5ddd5; color: #333; }
+        .container { max-width: 700px; margin: 0 auto; }
+        
+        .profile-container {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        .profile-pic {
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid #075E54;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            background-color: white;
+        }
+
+        .card { background: white; padding: 25px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h2, h3 { color: #075E54; margin-top: 0; }
+        .main-title { text-align: center; margin-top: 5px; margin-bottom: 25px; color: #075E54; }
+        
+        label { font-weight: bold; display: block; margin-top: 15px; margin-bottom: 5px; }
+        input[type="text"], input[type="number"], textarea, input[type="file"] { 
+            width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px;
+        }
+        .btn { background: #25D366; color: white; padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; width: 100%; transition: 0.3s; }
+        .btn:hover { background: #128C7E; }
+        .btn-secondary { background: #34B7F1; margin-top: 10px; }
+        .btn-secondary:hover { background: #0b93d5; }
+        
+        .contact-table { width: 100%; margin-top: 15px; border-collapse: collapse; }
+        .contact-table th, .contact-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .contact-table th { background-color: #f2f2f2; }
+        .remove-btn { color: red; cursor: pointer; font-weight: bold; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <!-- 👤 TOP PROFILE CIRCLE SECTION -->
+    <div class="profile-container">
+        <img src="https://i.ibb.co/rRdnmfT2/e2d6b828ee8162c8900e7888effb05cc.jpg" alt="Profile Logo" class="profile-pic">
+        <h2 class="main-title">𝐆𝐀𝐃𝐀𝐑 𝐖𝐇𝐀𝐓𝐒𝐀𝐏𝐏 𝐂𝐎𝐍𝐕𝐎 𝐊𝐀𝐓𝐓𝐀𝐑 𝐇𝐈𝐍𝐃𝐔</h2>
+    </div>
+
+    <!-- 1. DEVICE LINKING SECTION -->
+    <div class="card">
+        <h3>1. Device Link Karein (Pair Code)</h3>
+        <label for="phone">Apna WhatsApp Number:</label>
+        <input type="text" id="phone" placeholder="Country code ke sath (e.g., 919876543210)">
+        <br><br>
+        <button class="btn" onclick="getPairCode()">Generate Pair Code</button>
+        <h3 id="codeDisplay" style="color: #075E54; text-align: center; margin-top: 15px; font-size: 24px; letter-spacing: 2px;"></h3>
+    </div>
+
+    <!-- 2. ADD CONTACT SECTION -->
+    <div class="card">
+        <h3>2. Receiver Ki Details (Jisko Message Bhejna Hai)</h3>
+        
+        <label for="clientName">𝐇𝐄𝐀𝐑𝐓𝐒   𝐍𝐀𝐌𝐄:</label>
+        <input type="text" id="clientName" placeholder="E.g., 𝙆𝘼𝙏𝙏𝘼𝙍 𝙃𝙄𝙉𝘿𝙐 𝘾𝙊𝙉𝙑𝙊">
+
+        <label for="clientPhone">𝐇𝐄𝐀𝐑𝐓'𝐒   𝐍𝐔𝐌𝐁𝐄𝐑 :</label>
+        <input type="text" id="clientPhone" placeholder="Country code ke sath (e.g., 918888888888)">
+        
+        <button class="btn btn-secondary" onclick="addContactToList()">➕ List Me Add Karein</button>
+
+        <table class="contact-table" id="contactTable" style="display:none;">
+            <thead>
+                <tr>
+                    <th>Naam</th>
+                    <th>Number</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="contactListBody"></tbody>
+        </table>
+    </div>
+
+    <!-- 3. MESSAGE & FILE SETTINGS -->
+    <div class="card">
+        <h3>3. Message Aur Files Settings</h3>
+        
+        <label for="msg">Message (Naam iske aage apne aap lag jayega):</label>
+        <textarea id="msg" rows="4" placeholder="Apna message yahan likhein..."></textarea>
+
+        <label for="fileInput">File Attach Karein (Optional):</label>
+        <input type="file" id="fileInput">
+
+        <label for="delay">Kitne Second Baad Message Jaye? (Delay Time):</label>
+        <input type="number" id="delay" value="5" min="1">
+        
+        <br><br>
+        <button class="btn" style="background-color: #075E54;" onclick="startCampaign()">𝐒𝐓𝐀𝐑𝐓 </button>
+    </div>
+</div>
+
+<script>
+    let globalContactsList = [];
+
+    async function getPairCode() {
+        const phone = document.getElementById('phone').value;
+        if(!phone) return alert("Pehle apna WhatsApp number daalein!");
+        
+        document.getElementById('codeDisplay').innerText = "Code aa raha hai... Kripya rukiye";
+        
+        try {
+            const res = await fetch(`/get-pair-code?phone=${phone}`);
+            const data = await res.json();
+            if(data.code) {
+                document.getElementById('codeDisplay').innerText = "👉 " + data.code + " 👈";
+            } else {
+                document.getElementById('codeDisplay').innerText = data.message || "Error aayi.";
+            }
+        } catch(e) {
+            document.getElementById('codeDisplay').innerText = "Server se connect nahi ho paya.";
+        }
+    }
+
+    function addContactToList() {
+        const name = document.getElementById('clientName').value.trim();
+        const phone = document.getElementById('clientPhone').value.trim();
+
+        if(!name || !phone) {
+            alert("Naam aur Number dono daalna jaroori hai!");
+            return;
+        }
+
+        globalContactsList.push({ name: name, phone: phone });
+
+        document.getElementById('clientName').value = '';
+        document.getElementById('clientPhone').value = '';
+
+        updateContactTable();
+    }
+
+    function updateContactTable() {
+        const table = document.getElementById('contactTable');
+        const tbody = document.getElementById('contactListBody');
+        tbody.innerHTML = '';
+
+        if(globalContactsList.length > 0) {
+            table.style.display = 'table';
+        } else {
+            table.style.display = 'none';
+        }
+
+        globalContactsList.forEach((contact, index) => {
+            const row = `<tr>
+                <td>${contact.name}</td>
+                <td>${contact.phone}</td>
+                <td class="remove-btn" onclick="removeContact(${index})">❌ Delete</td>
+            </tr>`;
+            tbody.innerHTML += row;
+        });
+    }
+
+    function removeContact(index) {
+        globalContactsList.splice(index, 1);
+        updateContactTable();
+    }
+
+    async function startCampaign() {
+        const msg = document.getElementById('msg').value;
+        const delay = document.getElementById('delay').value;
+        const fileInput = document.getElementById('fileInput').files[0];
+
+        if(globalContactsList.length === 0) return alert("Kam se kam ek receiver ki detail toh add karein!");
+        if(!msg) return alert("Message box khali hai!");
+
+        const formData = new FormData();
+        formData.append('data', JSON.stringify(globalContactsList));
+        formData.append('messageTemplate', msg);
+        formData.append('delayTime', delay);
+        
+        if(fileInput) {
+            formData.append('file', fileInput);
+        }
+
+        alert("Campaign shuru ho gaya hai! Background me messages jaa rahe hain.");
+        
+        try {
+            const res = await fetch('/send-bulk', { method: 'POST', body: formData });
+            const result = await res.json();
+            alert(result.status || "Process poora hua!");
+        } catch(e) {
+            alert("Kuch error aayi hai.");
+        }
+    }
+</script>
+
+</body>
+</html>
