@@ -1,6 +1,6 @@
 const express = require('express');
 const multer = require('multer');
-const { default: makeWASocket, useMultiFileAuthState, delay, DisconnectReason } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, delay, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const QRCode = require('qrcode');
 const fs = require('fs');
@@ -21,16 +21,22 @@ app.get('/', (req, res) => {
 });
 
 async function initWhatsApp() {
-    console.log("Starting WhatsApp Initialization...");
+    console.log("Starting Fresh WhatsApp Initialization...");
     const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
     
+    // WhatsApp ka latest web version fetch karein taaki connection block na ho
+    const { version, isLatest } = await fetchLatestBaileysVersion().catch(() => ({ version: [2, 3000, 1015901307], isLatest: true }));
+
     sock = makeWASocket({
+        version,
         auth: state,
         logger: pino({ level: 'silent' }),
-        browser: ["Mac OS", "Chrome", "123.0.0.0"],
-        connectTimeoutMs: 60000,
-        defaultQueryTimeoutMs: 0,
-        keepAliveIntervalMs: 10000
+        // Yeh browser string bilkul official web app ki tarah treat hota hai
+        browser: ["Ubuntu", "Chrome", "20.0.04"],
+        printQRInTerminal: false,
+        mobile: false,
+        keepAliveIntervalMs: 30000,
+        connectTimeoutMs: 60000
     });
 
     sock.ev.on('creds.update', saveCreds);
@@ -39,31 +45,41 @@ async function initWhatsApp() {
         const { connection, lastDisconnect, qr } = update;
         
         if (qr) {
-            console.log("New QR Code Generated!");
+            console.log("🎯 QR Code Generated Successfully!");
             try {
                 latestQr = await QRCode.toDataURL(qr);
                 connectionStatus = "QR Ready";
             } catch (err) {
-                console.error("QR Conversion Error:", err);
+                console.error("QR Error:", err);
             }
         }
 
         if (connection === 'close') {
-            const shouldReconnect = (lastDisconnect?.error)?.output?.statusCode !== DisconnectReason.loggedOut;
-            console.log("Connection closed due to ", lastDisconnect?.error, ", reconnecting: ", shouldReconnect);
+            const statusCode = lastDisconnect?.error?.output?.statusCode;
+            const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+            console.log(`Connection closed (Status: ${statusCode}). Reconnecting: ${shouldReconnect}`);
+            
             connectionStatus = "Disconnected";
             latestQr = null;
+            
+            // Agar purana session corrupt ho gaya ho, toh use clear karke restart karein
+            if (statusCode === DisconnectReason.badSession || statusCode === 405) {
+                console.log("Bad session/Method not allowed detected. Cleaning cache...");
+                try { fs.rmSync('auth_info_baileys', { recursive: true, force: true }); } catch(e) {}
+            }
+
             if (shouldReconnect) {
-                initWhatsApp();
+                setTimeout(() => { initWhatsApp(); }, 5000); // 5 seconds baad automatic fresh try
             }
         } else if (connection === 'open') {
-            console.log("WhatsApp Successfully Connected!");
+            console.log("✅ WhatsApp successfully connected!");
             connectionStatus = "Connected";
             latestQr = null;
         }
     });
 }
 
+// Start core logic
 initWhatsApp();
 
 app.get('/get-qr', (req, res) => {
