@@ -64,7 +64,6 @@ async function initWhatsApp() {
     });
 }
 
-// Initialize on start
 initWhatsApp();
 
 app.get('/get-qr', (req, res) => {
