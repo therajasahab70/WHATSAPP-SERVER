@@ -30,7 +30,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// 🔥 Live Screen (SSE) route frontend ke liye
+// 🔥 Live Screen route
 app.get('/live-logs', (req, res) => {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -48,6 +48,7 @@ async function initWhatsApp() {
     
     sendLog("⚙️ Starting WhatsApp Initialization...");
     
+    // Auth info folder jisme session save hota hai
     const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
     const { version } = await fetchLatestBaileysVersion().catch(() => ({ version: [2, 3000, 1015901307] }));
 
@@ -55,7 +56,7 @@ async function initWhatsApp() {
         version,
         auth: state,
         logger: pino({ level: 'silent' }),
-        browser: ["Mac OS", "Chrome", "123.0.0.0"],
+        browser: ["GadarServer", "Chrome", "1.0.0"], // Browser name fixed to avoid block
         printQRInTerminal: false,
         syncFullHistory: false
     });
@@ -78,18 +79,22 @@ async function initWhatsApp() {
             sendLog(`⚠️ Connection closed (Code: ${statusCode}). Reconnecting...`);
             
             connectionStatus = "Disconnected";
-            latestQr = null;
             isInitializing = false;
 
+            // 🔥 FIX: Sirf tabhi session delete hoga jab aap phone se khud "Log out" karenge
             if (statusCode === DisconnectReason.loggedOut) {
-                sendLog("❌ User logged out. Session Delete kar rahe hain...");
+                sendLog("❌ User ne phone se log out kiya hai. Naya QR code laa rahe hain...");
+                latestQr = null;
                 try { fs.rmSync('auth_info_baileys', { recursive: true, force: true }); } catch(e) {}
             }
-            setTimeout(() => { initWhatsApp(); }, 3000);
+            
+            // Connection close hone par automatic reconnect kare bina naya QR banaye (agar logged out nahi hai)
+            setTimeout(() => { initWhatsApp(); }, 4000);
+
         } else if (connection === 'open') {
             sendLog("✅ WhatsApp Link Ho Gaya Hai! Ready for messages.");
             connectionStatus = "Connected";
-            latestQr = null; 
+            latestQr = null; // Connect hote hi screen se QR hata do
             isInitializing = false;
         }
     });
@@ -97,12 +102,8 @@ async function initWhatsApp() {
 
 initWhatsApp();
 
+// 🔥 FIX: Yahan se delete wala logic hata diya gaya hai jisse baar baar QR change na ho
 app.get('/get-qr', (req, res) => {
-    if (connectionStatus === "Disconnected" || (!latestQr && connectionStatus !== "Connected")) {
-        try { fs.rmSync('auth_info_baileys', { recursive: true, force: true }); } catch(e) {}
-        connectionStatus = "Initializing...";
-        initWhatsApp();
-    }
     res.json({ status: connectionStatus, qr: latestQr });
 });
 
@@ -114,12 +115,12 @@ app.post('/send-bulk', upload.single('file'), async (req, res) => {
         return res.status(400).json({ error: "Pehle WhatsApp QR Code scan karein." });
     }
 
-    // 🔥 FIX: File read logic (.txt file ka text nikalega)
+    // TXT File read logic
     let extraTextFromFile = "";
     if (file) {
         try {
             extraTextFromFile = fs.readFileSync(file.path, 'utf-8');
-            sendLog("📄 TXT File ka data successfully padh liya gaya hai.");
+            sendLog("📄 TXT File ka data padh liya gaya hai.");
             fs.unlinkSync(file.path); 
         } catch (err) {
             sendLog("❌ File ko padhne me error aayi.");
@@ -140,7 +141,7 @@ app.post('/send-bulk', upload.single('file'), async (req, res) => {
             
             for (let contact of contactList) {
                 if (connectionStatus !== "Connected") {
-                    sendLog("❌ WhatsApp Disconnected. Campaign Roki Jaa Rahi Hai.");
+                    sendLog("❌ WhatsApp Disconnected. Loop rok diya gaya hai.");
                     isCampaignRunning = false;
                     break;
                 }
@@ -156,10 +157,10 @@ app.post('/send-bulk', upload.single('file'), async (req, res) => {
                     // Message bhejna
                     await sock.sendMessage(formattedPhone, { text: personalizedMessage });
                     
-                    sendLog(`📩 Message bheja gaya: ${contact.name} (${cleanReceiverPhone}) ko.`);
+                    sendLog(`📩 Message bheja gaya: ${contact.name} ko.`);
                     await delay(waitSeconds); 
                 } catch (error) {
-                    sendLog(`❌ ERROR: ${contact.name} ko bhejne me fail. Error: ${error.message}`);
+                    sendLog(`❌ ERROR: ${contact.name} ko bhejne me fail.`);
                 }
             }
             
