@@ -7,34 +7,20 @@
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 30px; background: #e5ddd5; color: #333; }
         .container { max-width: 700px; margin: 0 auto; }
-        
-        .profile-container {
-            text-align: center;
-            margin-bottom: 25px;
-        }
-        .profile-pic {
-            width: 110px;
-            height: 110px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 4px solid #075E54;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-            background-color: white;
-        }
-
+        .profile-container { text-align: center; margin-bottom: 25px; }
+        .profile-pic { width: 110px; height: 110px; border-radius: 50%; object-fit: cover; border: 4px solid #075E54; box-shadow: 0 4px 10px rgba(0,0,0,0.15); background-color: white; }
         .card { background: white; padding: 25px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         h2, h3 { color: #075E54; margin-top: 0; }
         .main-title { text-align: center; margin-top: 5px; margin-bottom: 25px; color: #075E54; }
-        
         label { font-weight: bold; display: block; margin-top: 15px; margin-bottom: 5px; }
-        input[type="text"], input[type="number"], textarea, input[type="file"] { 
-            width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px;
-        }
+        input[type="text"], input[type="number"], textarea, input[type="file"] { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
         .btn { background: #25D366; color: white; padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; width: 100%; transition: 0.3s; }
         .btn:hover { background: #128C7E; }
         .btn-secondary { background: #34B7F1; margin-top: 10px; }
         .btn-secondary:hover { background: #0b93d5; }
-        
+        .qr-box { text-align: center; padding: 20px; margin-top: 10px; }
+        #qrImage { max-width: 230px; border: 3px solid #333; padding: 5px; background: white; border-radius: 5px; }
+        .status-badge { font-size: 18px; font-weight: bold; text-align: center; margin-top: 10px; color: #f39c12; }
         .contact-table { width: 100%; margin-top: 15px; border-collapse: collapse; }
         .contact-table th, .contact-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
         .contact-table th { background-color: #f2f2f2; }
@@ -45,30 +31,30 @@
 
 <div class="container">
 
-    <!-- 👤 TOP PROFILE CIRCLE SECTION -->
+    <!-- 👤 PROFILE HEADER -->
     <div class="profile-container">
         <img src="https://i.ibb.co/rRdnmfT2/e2d6b828ee8162c8900e7888effb05cc.jpg" alt="Profile Logo" class="profile-pic">
         <h2 class="main-title">𝐆𝐀𝐃𝐀𝐑 𝐖𝐇𝐀𝐓𝐒𝐀𝐏𝐏 𝐂𝐎𝐍𝐕𝐎 𝐊𝐀𝐓𝐓𝐀𝐑 𝐇𝐈𝐍𝐃𝐔</h2>
     </div>
 
-    <!-- 1. DEVICE LINKING SECTION -->
+    <!-- 1. QR CODE SCAN SECTION -->
     <div class="card">
-        <h3>1. Device Link Karein (Pair Code)</h3>
-        <label for="phone">Apna WhatsApp Number:</label>
-        <input type="text" id="phone" placeholder="Country code ke sath (e.g., 919876543210)">
-        <br><br>
-        <button class="btn" onclick="getPairCode()">Generate Pair Code</button>
-        <h3 id="codeDisplay" style="color: #075E54; text-align: center; margin-top: 15px; font-size: 24px; letter-spacing: 2px;"></h3>
+        <h3>1. WhatsApp QR Code Se Scan Karein</h3>
+        <div class="status-badge" id="statusText">Status: Checking Server...</div>
+        <div class="qr-box" id="qrContainer" style="display:none;">
+            <p>Apne Phone ka WhatsApp kholin -> Linked Devices -> Link a Device par click karke is QR ko scan karein:</p>
+            <img id="qrImage" src="" alt="WhatsApp QR Code">
+        </div>
     </div>
 
-    <!-- 2. ADD CONTACT SECTION -->
+    <!-- 2. ADD RECEIVER DETAILS -->
     <div class="card">
         <h3>2. Receiver Ki Details (Jisko Message Bhejna Hai)</h3>
         
         <label for="clientName">𝐇𝐄𝐀𝐑𝐓𝐒   𝐍𝐀𝐌𝐄:</label>
         <input type="text" id="clientName" placeholder="E.g., 𝙆𝘼𝙏𝙏𝘼𝙍 𝙃𝙄𝙉𝘿𝙐 𝘾𝙊𝙉𝙑𝙊">
 
-        <label for="clientPhone">𝐇𝐄𝐀𝐑𝐓'𝐒   𝐍𝐔𝐌𝐁𝐄𝐑 :</label>
+        <label for="clientPhone">𝐇𝐄𝐀𝐑𝐓'𝐒   𝐍𝐔𝐌𝐁𝐄𝐑:</label>
         <input type="text" id="clientPhone" placeholder="Country code ke sath (e.g., 918888888888)">
         
         <button class="btn btn-secondary" onclick="addContactToList()">➕ List Me Add Karein</button>
@@ -99,31 +85,44 @@
         <input type="number" id="delay" value="5" min="1">
         
         <br><br>
-        <button class="btn" style="background-color: #075E54;" onclick="startCampaign()">𝐒𝐓𝐀𝐑𝐓 </button>
+        <button class="btn" style="background-color: #075E54;" onclick="startCampaign()">🚀START</button>
     </div>
 </div>
 
 <script>
     let globalContactsList = [];
 
-    async function getPairCode() {
-        const phone = document.getElementById('phone').value;
-        if(!phone) return alert("Pehle apna WhatsApp number daalein!");
-        
-        document.getElementById('codeDisplay').innerText = "Code aa raha hai... Kripya rukiye";
-        
+    // QR aur Status Check karne ke liye Continuous Polling Function
+    async function checkServerStatus() {
         try {
-            const res = await fetch(`/get-pair-code?phone=${phone}`);
+            const res = await fetch('/get-qr');
             const data = await res.json();
-            if(data.code) {
-                document.getElementById('codeDisplay').innerText = "👉 " + data.code + " 👈";
+            
+            const statusText = document.getElementById('statusText');
+            const qrContainer = document.getElementById('qrContainer');
+            const qrImage = document.getElementById('qrImage');
+
+            statusText.innerText = "Status: " + data.status;
+
+            if (data.status === "Connected") {
+                statusText.style.color = "#25D366";
+                qrContainer.style.display = "none";
+            } else if (data.status === "QR Ready" && data.qr) {
+                statusText.style.color = "#f39c12";
+                qrContainer.style.display = "block";
+                qrImage.src = data.qr;
             } else {
-                document.getElementById('codeDisplay').innerText = data.message || "Error aayi.";
+                statusText.style.color = "#e74c3c";
+                statusText.innerText = "Status: QR Generate ho raha hai, kripya rukiye...";
+                qrContainer.style.display = "none";
             }
-        } catch(e) {
-            document.getElementById('codeDisplay').innerText = "Server se connect nahi ho paya.";
+        } catch (e) {
+            console.error("Error fetching QR data:", e);
         }
     }
+
+    // Har 3 second me background refresh karega status check karne ke liye
+    setInterval(checkServerStatus, 3000);
 
     function addContactToList() {
         const name = document.getElementById('clientName').value.trim();
@@ -135,10 +134,8 @@
         }
 
         globalContactsList.push({ name: name, phone: phone });
-
         document.getElementById('clientName').value = '';
         document.getElementById('clientPhone').value = '';
-
         updateContactTable();
     }
 
@@ -185,14 +182,14 @@
             formData.append('file', fileInput);
         }
 
-        alert("Campaign shuru ho gaya hai! Background me messages jaa rahe hain.");
+        alert("Campaign request sent! Background process shuru.");
         
         try {
             const res = await fetch('/send-bulk', { method: 'POST', body: formData });
             const result = await res.json();
-            alert(result.status || "Process poora hua!");
+            alert(result.status || "Completed!");
         } catch(e) {
-            alert("Kuch error aayi hai.");
+            alert("Kuch error aayi hai. Check karein ki WhatsApp successfully link hai ya nahi.");
         }
     }
 </script>
