@@ -26,11 +26,24 @@ function sendLog(msg) {
     logEmitter.emit('log', msg);
 }
 
+// 💬 Typing aur Message bhejne ka safe function
+async function sendMsgWithTyping(socket, jid, textContent) {
+    try {
+        await socket.presenceSubscribe(jid);
+        await socket.sendPresenceUpdate('composing', jid);
+        await delay(1500); // 1.5 sec typing...
+        await socket.sendPresenceUpdate('paused', jid);
+        await socket.sendMessage(jid, { text: textContent });
+    } catch (err) {
+        throw new Error("Message sending failed: " + err.message);
+    }
+}
+
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// 🔥 Live Screen route
+// Live Screen route
 app.get('/live-logs', (req, res) => {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -111,19 +124,28 @@ app.post('/send-bulk', upload.single('file'), async (req, res) => {
         return res.status(400).json({ error: "Pehle WhatsApp QR Code scan karein." });
     }
 
-    let extraTextFromFile = "";
+    const contactList = JSON.parse(data); 
+    const waitSeconds = parseInt(delayTime) * 1000;
+
+    // 🔥 NEW: TXT File ko line-by-line todna
+    let messageLines = [];
     if (file) {
         try {
-            extraTextFromFile = fs.readFileSync(file.path, 'utf-8');
-            sendLog("📄 TXT File ka data padh liya gaya hai.");
+            const fullText = fs.readFileSync(file.path, 'utf-8');
+            // File ko alag-alag lines (enter) ke hisaab se todna. (Khali lines ignore ho jayengi)
+            messageLines = fullText.split(/\r?\n/).map(line => line.trim()).filter(line => line.length > 0);
+            
+            sendLog(`📄 TXT File load ho gayi. Isme total ${messageLines.length} alag-alag messages (lines) hain.`);
             fs.unlinkSync(file.path); 
         } catch (err) {
             sendLog("❌ File ko padhne me error aayi.");
         }
     }
 
-    const contactList = JSON.parse(data); 
-    const waitSeconds = parseInt(delayTime) * 1000;
+    if (!messageTemplate.trim() && messageLines.length === 0) {
+        sendLog(`❌ ERROR: Message khali hai! Box me kuch likhein ya file lagayein.`);
+        return res.json({ status: "Error: Blank message" });
+    }
 
     res.json({ status: "Campaign Start! Niche Live Screen par dekhein." });
     isCampaignRunning = true;
@@ -141,38 +163,37 @@ app.post('/send-bulk', upload.single('file'), async (req, res) => {
                     break;
                 }
 
-                try {
-                    let cleanReceiverPhone = contact.phone.replace(/[^0-9]/g, '');
-                    const formattedPhone = `${cleanReceiverPhone}@s.whatsapp.net`;
-                    
-                    let personalizedMessage = "";
-                    if (messageTemplate && messageTemplate.trim()) {
-                        personalizedMessage += `${contact.name}, ${messageTemplate}\n\n`;
-                    }
-                    if (extraTextFromFile && extraTextFromFile.trim()) {
-                        personalizedMessage += extraTextFromFile;
-                    }
+                let cleanReceiverPhone = contact.phone.replace(/[^0-9]/g, '');
+                const formattedPhone = `${cleanReceiverPhone}@s.whatsapp.net`;
 
-                    // 🔥 FIX: Blank message check (Agar kuch nahi likha toh error dega)
-                    if (!personalizedMessage.trim()) {
-                        sendLog(`❌ ERROR: Message khali hai! Kripya Message box me kuch likhein ya .txt file attach karein.`);
-                        isCampaignRunning = false; // Loop ko yahin rok dega
-                        return;
+                // 1️⃣ PHOLE MESSAGE BOX KA TEXT BHEJNA (Agar likha hai toh)
+                if (messageTemplate && messageTemplate.trim()) {
+                    try {
+                        let personalizedMsg = `${contact.name}, ${messageTemplate.trim()}`;
+                        await sendMsgWithTyping(sock, formattedPhone, personalizedMsg);
+                        sendLog(`📩 Box Msg Sent: ${contact.name} ko.`);
+                        await delay(waitSeconds); // Pehle message ke baad delay
+                    } catch (error) {
+                        sendLog(`❌ ERROR (Box Msg): ${contact.name} - ${error.message}`);
                     }
+                }
 
-                    // 🔥 NEW: Typing Status (Human behavior + Perfect Sync on Phone)
-                    await sock.presenceSubscribe(formattedPhone);
-                    await sock.sendPresenceUpdate('composing', formattedPhone);
-                    await delay(1500); // 1.5 Seconds tak "Typing..." show hoga
-                    await sock.sendPresenceUpdate('paused', formattedPhone);
-
-                    // Message bhejna
-                    await sock.sendMessage(formattedPhone, { text: personalizedMessage });
-                    
-                    sendLog(`📩 Message Sent & Synced: ${contact.name} ko.`);
-                    await delay(waitSeconds); 
-                } catch (error) {
-                    sendLog(`❌ ERROR: ${contact.name} ko bhejne me fail. (${error.message})`);
+                // 2️⃣ FIR FILE KI LINES KO EK-EK KARKE BHEJNA (Delay ke sath)
+                if (messageLines.length > 0) {
+                    sendLog(`📂 ${contact.name} ko File ke ${messageLines.length} messages bhejna shuru...`);
+                    for (let i = 0; i < messageLines.length; i++) {
+                        if (!isCampaignRunning || connectionStatus !== "Connected") break;
+                        
+                        try {
+                            const lineText = messageLines[i];
+                            await sendMsgWithTyping(sock, formattedPhone, lineText);
+                            // Live screen par dikhayega ki konsi line gayi
+                            sendLog(`📩 File Msg (${i+1}/${messageLines.length}) Sent -> ${contact.name}`);
+                            await delay(waitSeconds); // Har ek line bhejte waqt aapka set kiya hua Delay lega
+                        } catch (error) {
+                            sendLog(`❌ ERROR (File Msg): ${contact.name} - ${error.message}`);
+                        }
+                    }
                 }
             }
             
