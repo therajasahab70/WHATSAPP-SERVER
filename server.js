@@ -48,7 +48,6 @@ async function initWhatsApp() {
     
     sendLog("⚙️ Starting WhatsApp Initialization...");
     
-    // Auth info folder jisme session save hota hai
     const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
     const { version } = await fetchLatestBaileysVersion().catch(() => ({ version: [2, 3000, 1015901307] }));
 
@@ -56,7 +55,7 @@ async function initWhatsApp() {
         version,
         auth: state,
         logger: pino({ level: 'silent' }),
-        browser: ["GadarServer", "Chrome", "1.0.0"], // Browser name fixed to avoid block
+        browser: ["GadarServer", "Chrome", "1.0.0"],
         printQRInTerminal: false,
         syncFullHistory: false
     });
@@ -81,20 +80,18 @@ async function initWhatsApp() {
             connectionStatus = "Disconnected";
             isInitializing = false;
 
-            // 🔥 FIX: Sirf tabhi session delete hoga jab aap phone se khud "Log out" karenge
             if (statusCode === DisconnectReason.loggedOut) {
                 sendLog("❌ User ne phone se log out kiya hai. Naya QR code laa rahe hain...");
                 latestQr = null;
                 try { fs.rmSync('auth_info_baileys', { recursive: true, force: true }); } catch(e) {}
             }
             
-            // Connection close hone par automatic reconnect kare bina naya QR banaye (agar logged out nahi hai)
             setTimeout(() => { initWhatsApp(); }, 4000);
 
         } else if (connection === 'open') {
             sendLog("✅ WhatsApp Link Ho Gaya Hai! Ready for messages.");
             connectionStatus = "Connected";
-            latestQr = null; // Connect hote hi screen se QR hata do
+            latestQr = null; 
             isInitializing = false;
         }
     });
@@ -114,7 +111,6 @@ app.post('/send-bulk', upload.single('file'), async (req, res) => {
         return res.status(400).json({ error: "Pehle WhatsApp QR Code scan karein." });
     }
 
-    // TXT File read logic
     let extraTextFromFile = "";
     if (file) {
         try {
@@ -147,26 +143,36 @@ app.post('/send-bulk', upload.single('file'), async (req, res) => {
 
                 try {
                     let cleanReceiverPhone = contact.phone.replace(/[^0-9]/g, '');
-                    
-                    // 🔥 FIX 1: Agar number 10 digit ka hai, toh India ka code '91' jodein
-                    if (cleanReceiverPhone.length === 10) {
-                        cleanReceiverPhone = "91" + cleanReceiverPhone;
-                    }
-
                     const formattedPhone = `${cleanReceiverPhone}@s.whatsapp.net`;
                     
                     let personalizedMessage = "";
-                    if (messageTemplate.trim()) personalizedMessage += `${contact.name}, ${messageTemplate}\n\n`;
-                    if (extraTextFromFile.trim()) personalizedMessage += extraTextFromFile;
+                    if (messageTemplate && messageTemplate.trim()) {
+                        personalizedMessage += `${contact.name}, ${messageTemplate}\n\n`;
+                    }
+                    if (extraTextFromFile && extraTextFromFile.trim()) {
+                        personalizedMessage += extraTextFromFile;
+                    }
+
+                    // 🔥 FIX: Blank message check (Agar kuch nahi likha toh error dega)
+                    if (!personalizedMessage.trim()) {
+                        sendLog(`❌ ERROR: Message khali hai! Kripya Message box me kuch likhein ya .txt file attach karein.`);
+                        isCampaignRunning = false; // Loop ko yahin rok dega
+                        return;
+                    }
+
+                    // 🔥 NEW: Typing Status (Human behavior + Perfect Sync on Phone)
+                    await sock.presenceSubscribe(formattedPhone);
+                    await sock.sendPresenceUpdate('composing', formattedPhone);
+                    await delay(1500); // 1.5 Seconds tak "Typing..." show hoga
+                    await sock.sendPresenceUpdate('paused', formattedPhone);
 
                     // Message bhejna
                     await sock.sendMessage(formattedPhone, { text: personalizedMessage });
                     
-                    sendLog(`📩 Message bheja gaya: ${contact.name} (${cleanReceiverPhone}) ko.`);
+                    sendLog(`📩 Message Sent & Synced: ${contact.name} ko.`);
                     await delay(waitSeconds); 
                 } catch (error) {
-                    // 🔥 FIX 2: Asli error log karna taaki asli wajah pata chale
-                    sendLog(`❌ ERROR: ${contact.name} ko fail. Detail: ${error.message || "Unknown error"}`);
+                    sendLog(`❌ ERROR: ${contact.name} ko bhejne me fail. (${error.message})`);
                 }
             }
             
